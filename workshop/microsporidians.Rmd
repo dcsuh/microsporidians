@@ -98,7 +98,7 @@ dat %<>% mutate(lakeday = paste(lake_id, jday_cum, sep = "_"))
 # dat$lakeday <- gsub(" ", "", dat$lakeday)
 
 
-spores_compiled <- inner_join(compiled_data, dat)
+spores_compiled <- left_join(dat, compiled_data)
 ```
 
 Need to figure out why there are different numbers between spores_compiled and dat if all of the data in dat should be in spores_compiled
@@ -115,10 +115,19 @@ table(dat$year)
 
 table(spores_compiled$lakeday)
 table(dat$lakeday)
+length(names(table(spores_compiled$lakeday)))
+length(names(table(dat$lakeday)))
 ```
 
 Check to see if missing data are just due to data not yet being entered
 ```{r}
+missing <- which(!names(table(dat$lakeday)) %in% names(table(spores_compiled$lakeday)))
+missing_names <- unique(dat$lakeday[missing])
 
+for (i in 1:length(missing_names)){
+  print(missing_names[i])
+  print(unique(dat$lakeday[missing])[i] %in% compiled_data$lakeday)
+  print(unique(dat$lakeday[missing])[i] %in% spores_compiled$lakeday)
+}
 ```
 
