@@ -131,3 +131,9 @@ for (i in 1:length(missing_names)){
 }
 ```
 
+
+```{r}
+write.csv(spores_compiled, file = here("workshop", "microsporidians.csv"))
+```
+
+
