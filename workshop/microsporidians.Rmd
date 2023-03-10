@@ -11,6 +11,7 @@ library(magrittr)
 library(here)
 
 library(lubridate)
+library(textclean)
 ```
 
 ```{r, read data, message=F}
@@ -22,13 +23,27 @@ compiled_data <- read_csv(here("data", "GAponds.master.summary.csv"))
 lake_key <- read_csv(here("data", "lake_name_key.csv"))
 ```
 
+Lots of annoying really text cleaning because apparently strings can be encoded in ways that make them visually the same but not actually identical
+```{r}
+lake_key %<>% mutate(lake_name = replace_non_ascii(lake_name),
+                     lake_abb = replace_non_ascii(lake_abb))
+compiled_data %<>% mutate(lakeday = replace_non_ascii(lakeday),
+                          lake_id = replace_non_ascii(lake_id))
+```
+
+
+
 ```{r, merge}
 dat_2021 %<>% mutate(year="2021")
 dat_2022 %<>% mutate(year="2022")
 dat <- bind_rows(dat_2021,dat_2022)
 summary(dat)
 dat %<>% mutate(full_date = paste(Date,year,sep="-"))
+
+dat %<>% mutate(Lake = replace_non_ascii(Lake))
 ```
+
+
 
 ```{r, incidence}
 incidence <- dat %>% group_by(Lake, full_date) %>% summarize(n=n())
@@ -69,6 +84,7 @@ dat %<>%
      mutate(lake_id = Lake,
             across(lake_id, ~  lake_key$lake_name[match(., lake_key$lake_abb)]))
 
+
 dat$year <- as.numeric(dat$year)
 
 dat %<>% mutate(jday = yday(st_date),
@@ -78,12 +94,15 @@ dat %<>% mutate(jday = yday(st_date),
 
 dat %<>% mutate(lakeday = paste(lake_id, jday_cum, sep = "_"))
 
-spores_compiled <- inner_join(compiled_data, dat, by = join_by(lakeday))
+# compiled_data$lakeday <- gsub(" ", "",compiled_data$lakeday)
+# dat$lakeday <- gsub(" ", "", dat$lakeday)
+
+
+spores_compiled <- inner_join(compiled_data, dat)
 ```
 
 Need to figure out why there are different numbers between spores_compiled and dat if all of the data in dat should be in spores_compiled
 ```{r}
-spores_compiled %<>% filter(!is.na(Key))
 
 table(spores_compiled$lake_id)
 table(dat$lake_id)
@@ -93,5 +112,13 @@ table(dat$st_date)
 
 table(spores_compiled$year)
 table(dat$year)
+
+table(spores_compiled$lakeday)
+table(dat$lakeday)
+```
+
+Check to see if missing data are just due to data not yet being entered
+```{r}
+
 ```
 
