@@ -5,10 +5,12 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r, load packages}
+```{r, load packages, include = F, message = F}
 library(tidyverse)
 library(magrittr)
 library(here)
+
+library(lubridate)
 ```
 
 ```{r, read data, message=F}
@@ -16,6 +18,8 @@ dat_2021 <- read_csv(here("data", "raw", "Microsporidian spore yield 2021.csv"))
 dat_2022 <- read_csv(here("data", "raw", "Microsporidian spore yield 2022.csv"))
 
 compiled_data <- read_csv(here("data", "GAponds.master.summary.csv"))
+
+lake_key <- read_csv(here("data", "lake_name_key.csv"))
 ```
 
 ```{r, merge}
@@ -46,4 +50,48 @@ yield <- dat %>% mutate(log_spores = log(Spores)) %>%
 yield %>% ggplot(.,aes(x=Species, y=mean, fill = Species)) + geom_col() + geom_errorbar(aes(ymin=mean-se, ymax=mean+se))
 ```
 
+
+```{r}
+dat %<>% mutate(st_date = ifelse(is.na(dmy(full_date)),
+                                 mdy(Date),
+                                 dmy(full_date))) #cannot understand why it is parsing into numeric rather than a date >:(
+
+dat %<>% mutate(st_date = as.Date.numeric(st_date, origin = origin))
+
+
+compiled_data %<>% mutate(st_date = mdy(date))
+```
+
+
+Join
+```{r}
+dat %<>%
+     mutate(lake_id = Lake,
+            across(lake_id, ~  lake_key$lake_name[match(., lake_key$lake_abb)]))
+
+dat$year <- as.numeric(dat$year)
+
+dat %<>% mutate(jday = yday(st_date),
+               jday_cum = ifelse(year == 2021,
+                                 jday,
+                                 jday+365*(year-2021)))
+
+dat %<>% mutate(lakeday = paste(lake_id, jday_cum, sep = "_"))
+
+spores_compiled <- inner_join(compiled_data, dat, by = join_by(lakeday))
+```
+
+Need to figure out why there are different numbers between spores_compiled and dat if all of the data in dat should be in spores_compiled
+```{r}
+spores_compiled %<>% filter(!is.na(Key))
+
+table(spores_compiled$lake_id)
+table(dat$lake_id)
+
+table(spores_compiled$st_date)
+table(dat$st_date)
+
+table(spores_compiled$year)
+table(dat$year)
+```
 
