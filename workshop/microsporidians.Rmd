@@ -14,6 +14,8 @@ library(here)
 ```{r, read data, message=F}
 dat_2021 <- read_csv(here("data", "raw", "Microsporidian spore yield 2021.csv"))
 dat_2022 <- read_csv(here("data", "raw", "Microsporidian spore yield 2022.csv"))
+
+compiled_data <- read_csv(here("data", "GAponds.master.summary.csv"))
 ```
 
 ```{r, merge}
