@@ -1,0 +1,35 @@
+---
+title: "workshop"
+author: "Daniel Suh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(here)
+```
+
+
+
+read data
+```{r}
+dat <- read_csv(here("workshop/microsporidians.csv"))
+
+seq_dat <- read_csv(here("data/Microsporidia ID for Alex Strauss - All Samples.csv"))
+```
+
+```{r}
+seq_dat %<>% mutate(Key = `Sample ID`)
+
+dat %<>% full_join(., seq_dat, by = join_by(Key, Lake, `Avg. Count`, Spores))
+
+dat %<>% filter(!is.na(Key)) %>% filter(!is.na(colnames(.[1]))) %>% filter(!is.na(Species)) %>% select(-colnames(.[1]))
+```
+
+
+```{r}
+
+```
+
