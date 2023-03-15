@@ -9,6 +9,7 @@ output: html_document
 library(tidyverse)
 library(magrittr)
 library(here)
+library(ggridges)
 ```
 
 
@@ -29,7 +30,35 @@ dat %<>% filter(!is.na(Key)) %>% filter(!is.na(colnames(.[1]))) %>% filter(!is.n
 ```
 
 
+
+
+Let's make this look like the ranavirus data
+
+Spore yield by host species (treats all microsporidians as the same)
 ```{r}
+spores <- dat %>% group_by(Species) %>% summarize(yield = mean(Spores),
+                                                  var = var(Spores),
+                                                  se = sd(Spores)/sqrt(n()))
+
+site_months <- dat %>% select(c(full_date:worm)) %>% group_by(st_date, lake_id) %>% distinct()
+
+site_months %<>% mutate(abund = sum(c(dpa.ncount, dam.ncount, dla.ncount, sim.ncount, dia.ncount, cer.ncount, bos.ncount)),
+                        inf = sum(c(dpa.ninfect, dam.ninfect, dla.ninfect, sim.ninfect, dia.ninfect, cer.ninfect, bos.ninfect)),
+                        prev = inf/abund)
+
+site_months %<>% filter(!lake_id %in% c("Oglethorpe", "NN1", "Memorial", "Chapman"))
+
+site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.factor(lake_id), height = abund)) + 
+  geom_density_ridges_gradient(show.legend = F, stat = "identity") + 
+  labs(x = "Day", y ="Lake", title = "Abundance over time")
+
+site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.factor(lake_id), height = inf)) + 
+  geom_density_ridges_gradient(show.legend = F, stat = "identity") + 
+  labs(x = "Day", y ="Lake", title = "Incidence over time")
+
+site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.factor(lake_id), height = prev)) + 
+  geom_density_ridges_gradient(show.legend = F, stat = "identity") + 
+  labs(x = "Day", y ="Lake", title = "Prevalence over time")
 
 ```
 
