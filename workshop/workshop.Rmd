@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r}
+```{r, message=F}
 library(tidyverse)
 library(magrittr)
 library(here)
@@ -15,7 +15,7 @@ library(ggridges)
 
 
 read data
-```{r}
+```{r, message = F}
 dat <- read_csv(here("workshop/microsporidians.csv"))
 
 seq_dat <- read_csv(here("data/Microsporidia ID for Alex Strauss - All Samples.csv"))
@@ -30,16 +30,25 @@ dat %<>% filter(!is.na(Key)) %>% filter(!is.na(colnames(.[1]))) %>% filter(!is.n
 ```
 
 
-
-
-Let's make this look like the ranavirus data
-
-Spore yield by host species (treats all microsporidians as the same)
+Average spore yield per host species for all parasite species
 ```{r}
-spores <- dat %>% group_by(Species) %>% summarize(yield = mean(Spores),
-                                                  var = var(Spores),
-                                                  se = sd(Spores)/sqrt(n()))
+yield <- dat %>% mutate(log_spores = log(Spores)) %>% 
+  group_by(Species) %>% 
+  summarize(mean = mean(log_spores),
+            var = var(log_spores),
+            se = sd(log_spores)/sqrt(n()))
+```
 
+
+```{r}
+yield %>% ggplot(.,aes(x=Species, y=mean, fill = Species)) + geom_col() + geom_errorbar(aes(ymin=mean-se, ymax=mean+se))
+```
+
+
+
+
+Site-months
+```{r}
 site_months <- dat %>% select(c(full_date:worm)) %>% group_by(st_date, lake_id) %>% distinct()
 
 site_months %<>% mutate(abund = sum(c(dpa.ncount, dam.ncount, dla.ncount, sim.ncount, dia.ncount, cer.ncount, bos.ncount)),
@@ -59,6 +68,11 @@ site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.facto
 site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.factor(lake_id), height = prev)) + 
   geom_density_ridges_gradient(show.legend = F, stat = "identity") + 
   labs(x = "Day", y ="Lake", title = "Prevalence over time")
+
+```
+
+
+```{r}
 
 ```
 

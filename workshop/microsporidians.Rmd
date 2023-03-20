@@ -51,19 +51,6 @@ species_incidence <- dat %>% group_by(Lake, full_date, Species) %>% summarize(n=
 ```
 
 
-Average spore yield per host species for all parasite species
-```{r}
-yield <- dat %>% mutate(log_spores = log(Spores)) %>% 
-  group_by(Species) %>% 
-  summarize(mean = mean(log_spores),
-            var = var(log_spores),
-            se = sd(log_spores)/sqrt(n()))
-```
-
-
-```{r}
-yield %>% ggplot(.,aes(x=Species, y=mean, fill = Species)) + geom_col() + geom_errorbar(aes(ymin=mean-se, ymax=mean+se))
-```
 
 
 ```{r}
