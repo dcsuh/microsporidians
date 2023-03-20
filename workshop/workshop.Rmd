@@ -73,6 +73,32 @@ site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.facto
 
 
 ```{r}
-
+abundances <- site_months %>% select(c(st_date, lake_id, jday_cum, lakeday, dpa.ncount, dam.ncount, dla.ncount, sim.ncount, dia.ncount, cer.ncount, bos.ncount, abund))
+abundances %<>% pivot_longer(.,cols = ends_with("ncount"))
+abundances %<>% mutate(prop = value/abund)
 ```
+
+```{r}
+abundances %>% filter(lake_id == "Deans") %>% ggplot(.,aes(x=as.factor(jday_cum), y=prop, fill=name)) + geom_bar(stat = "identity", position="stack")
+```
+
+
+```{r}
+mean_abund <- site_months %>% group_by(lake_id) %>% summarize(dpa_prop = mean(dpa.ncount/abund),
+                                                              dpa_se = sd(dpa.ncount/abund)/sqrt(n()),
+                                                              dam_prop = mean(dam.ncount/abund),
+                                                              dam_se = sd(dam.ncount/abund)/sqrt(n()),
+                                                              dla_prop = mean(dla.ncount/abund),
+                                                              dla_se = sd(dla.ncount/abund)/sqrt(n()),
+                                                              sim_prop = mean(sim.ncount/abund),
+                                                              sim_se = sd(sim.ncount/abund)/sqrt(n()),
+                                                              dia_prop = mean(dia.ncount/abund),
+                                                              dia_se = sd(dia.ncount/abund)/sqrt(n()),
+                                                              cer_prop = mean(cer.ncount/abund),
+                                                              cer_se = sd(cer.ncount/abund)/sqrt(n()),
+                                                              bos_prop = mean(bos.ncount/abund),
+                                                              bos_se = sd(bos.ncount/abund)/sqrt(n()))
+```
+
+
 
