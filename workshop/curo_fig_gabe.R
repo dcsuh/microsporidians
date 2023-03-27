@@ -55,7 +55,7 @@ dens <- dat1 %>% pivot_longer(., cols = ends_with("dens"), values_to = "dens") %
 
 abund <- dat1 %>% pivot_longer(., cols = ends_with("ncount"), values_to = "AB") %>% mutate(species = gsub(".ncount","",name)) %>% select(lakeday, lake_id, jday_cum, AB, species)
 
-# rel_abund <- dat1 %>% pivot_longer(., cols = ends_with("ra"), values_to = "RA") %>% mutate(species = gsub(".ra","",name)) %>% select(lakeday, lake_id, jday_cum, RA, species)
+rel_abund <- dat1 %>% pivot_longer(., cols = ends_with("ra"), values_to = "RA") %>% mutate(species = gsub(".ra","",name)) %>% select(lakeday, lake_id, jday_cum, RA, species)
 
 prev <- dat1 %>% pivot_longer(., cols = ends_with("prev"), values_to = "prev") %>% mutate(species = gsub(".prev","",name)) %>% select(lakeday, lake_id, jday_cum, prev, species)
 
@@ -68,55 +68,55 @@ lake_int %<>% left_join(., dens)
 lake_int %<>% left_join(., prev)
 
 #calculate # of spores contributed by each species at each site at each sampling event
-lake_int %<>% mutate(rel_spores = dens*prev*mean_spores)
+lake_int %<>% mutate(rel_spores = ifelse(!is.na(prev),dens*prev*mean_spores, 0))
 
 #calculate total # of spores produced by infected hosts of all species at each site at each sampling event
 total_lake_int <- lake_int %>% group_by(lakeday, lake_id, jday_cum) %>% summarize(tot_spores = sum(rel_spores, na.rm = T))
 
 #merge
 lake_int %<>% left_join(., total_lake_int)
-dat1 %<>% left_join(.,total_lake_int)
+#dat1 %<>% left_join(.,total_lake_int)
 
-#look at relationship between total host abundance (infectd + uninfected) and total spores at each site at each sampling event
-dat1 %>% ggplot(.,aes(x=log(total_abund), y=log(tot_spores))) + geom_point() + geom_smooth(method = "lm")
-
-#relative contribution of each species at each site over all time
-lake_int %>% ggplot(.,aes(x = lake_id, y=rel_spores, fill = species)) + geom_bar(stat = "identity", position = "stack")
-
-#relative contribution of each species at each site at each sampling event
-lake_int %>% ggplot(., aes(x=rel_spores, y=tot_spores, color=species, size = AB*prev)) + geom_point()
-
-
-lake_int %>% filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe", "NN3", "Sister 1")) %>%
-  filter(!is.na(lake_id)) %>%
-  filter(tot_spores > 0) %>% 
-  ggplot(., aes(x = as.factor(jday_cum), y = log(rel_spores), fill = species)) + 
-  geom_bar(stat = "identity", position = "stack") + 
-  facet_wrap(vars(lake_id),
-             ncol=1)
+# #look at relationship between total host abundance (infectd + uninfected) and total spores at each site at each sampling event
+# dat1 %>% ggplot(.,aes(x=log(total_abund), y=log(tot_spores))) + geom_point() + geom_smooth(method = "lm")
+# 
+# #relative contribution of each species at each site over all time
+# lake_int %>% ggplot(.,aes(x = lake_id, y=rel_spores, fill = species)) + geom_bar(stat = "identity", position = "stack")
+# 
+# #relative contribution of each species at each site at each sampling event
+# lake_int %>% ggplot(., aes(x=rel_spores, y=tot_spores, color=species, size = AB*prev)) + geom_point()
 
 
-lake_int %>% filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe", "NN3", "Sister 1", "Catfish")) %>%
-  filter(!is.na(lake_id)) %>%
-  filter(jday_cum %in% c(90:260)) %>% 
-  filter(!is.na(tot_spores)) %>% 
-  ggplot(., aes(x = as.factor(jday_cum), y = rel_spores, fill = species)) + 
-  geom_bar(stat = "identity", position = "stack") + 
-  facet_wrap(vars(lake_id),
-             ncol=1)
+# lake_int %>% filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe", "NN3", "Sister 1")) %>%
+#   filter(!is.na(lake_id)) %>%
+#   filter(tot_spores > 0) %>% 
+#   ggplot(., aes(x = as.factor(jday_cum), y = log(rel_spores), fill = species)) + 
+#   geom_bar(stat = "identity", position = "stack") + 
+#   facet_wrap(vars(lake_id),
+#              ncol=1)
+
+# 
+# lake_int %>% filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe", "NN3", "Sister 1", "Catfish")) %>%
+#   filter(!is.na(lake_id)) %>%
+#   filter(jday_cum %in% c(90:260)) %>% 
+#   filter(!is.na(tot_spores)) %>% 
+#   ggplot(., aes(x = as.factor(jday_cum), y = rel_spores, fill = species)) + 
+#   geom_bar(stat = "identity", position = "stack") + 
+#   facet_wrap(vars(lake_id),
+#              ncol=1)
+
+# 
+# lake_int %>% filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe")) %>%
+#   filter(jday_cum %in% c(420:500)) %>% 
+#   filter(!is.na(tot_spores)) %>% 
+#   ggplot(., aes(x = as.factor(jday_cum), y = rel_spores, fill = species)) + 
+#   geom_bar(stat = "identity", position = "stack") + 
+#   facet_wrap(vars(lake_id),
+#              ncol=1)
 
 
-lake_int %>% filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe")) %>%
-  filter(jday_cum %in% c(420:500)) %>% 
-  filter(!is.na(tot_spores)) %>% 
-  ggplot(., aes(x = as.factor(jday_cum), y = rel_spores, fill = species)) + 
-  geom_bar(stat = "identity", position = "stack") + 
-  facet_wrap(vars(lake_id),
-             ncol=1)
-
-
-lake_int %>% ggplot(.,aes(x = AB*prev, y = tot_spores, color = species)) + geom_point()
-lake_int %>% ggplot(.,aes(x = mean_spores, y = rel_spores, color = species)) + geom_point()
+#lake_int %>% ggplot(.,aes(x = AB*prev, y = tot_spores, color = species)) + geom_point()
+#lake_int %>% ggplot(.,aes(x = mean_spores, y = rel_spores, color = species)) + geom_point()
 
 yield %>% arrange(desc(mean_spores)) %>% mutate(species=factor(species, levels=unique(species))) %>%
   filter(!is.na(mean_spores)) %>% 
@@ -128,30 +128,29 @@ yield %>% arrange(desc(mean_spores)) %>% mutate(species=factor(species, levels=u
 
 
 p1 <- lake_int %>% arrange(desc(tot_spores)) %>% mutate(lakeday=factor(lakeday, levels=unique(lakeday))) %>%
-#  filter(tot_spores > 0 & tot_spores < 10000000) %>% 
-  filter(tot_spores > 1000000) %>% 
+  filter(species != "bos") %>% 
+  filter(tot_spores > 100000000) %>% 
   filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe")) %>% 
   ggplot(., aes(x = lakeday, y = rel_spores, fill = species)) + 
   geom_bar(stat = "identity", position = "stack") + 
   theme(axis.text.x = element_blank(), axis.title.x = element_blank(), axis.ticks.x = element_blank()) + labs(y = "# of Spores")
 
 p2 <- lake_int %>% arrange(desc(tot_spores)) %>% mutate(lakeday=factor(lakeday, levels=unique(lakeday))) %>%
-#  filter(tot_spores > 0 & tot_spores < 10000000) %>% 
-  filter(tot_spores > 1000000) %>% 
+  filter(species != "bos") %>% 
+  filter(tot_spores > 100000000) %>% 
   filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe")) %>% 
-  ggplot(., aes(x = lakeday, y = rel_spores/mean_spores, color = species, fill = mean_spores)) + 
-  scale_fill_viridis_c() + 
-  geom_bar(stat = "identity", position = "stack", linewidth = 1) + 
-  theme(axis.text.x = element_text(angle = 70, hjust = 1)) + guides(color = "none") + labs(y = "# of infected individuals")
-
-lake_int %>% arrange(desc(tot_spores)) %>% mutate(lakeday=factor(lakeday, levels=unique(lakeday))) %>%
-  filter(tot_spores > 0 & tot_spores < 10000000) %>% 
-  filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe")) %>% 
-  group_by(lakeday) %>% slice_max(rel_spores) %>% 
-  ggplot(., aes(x = lakeday, y = AB*prev, color = species, fill = mean_spores)) + 
-  scale_fill_viridis_c() + 
+  ggplot(., aes(x = lakeday, y = rel_spores/mean_spores, fill = species)) + 
   geom_bar(stat = "identity", position = "stack") + 
-  theme(axis.text.x = element_text(angle = 70, hjust = 1)) + labs(y = "# of infected individuals")
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) + guides(fill = "none") + labs(y = "# of infected individuals")
+
+# lake_int %>% arrange(desc(tot_spores)) %>% mutate(lakeday=factor(lakeday, levels=unique(lakeday))) %>%
+#   filter(tot_spores > 0 & tot_spores < 10000000) %>% 
+#   filter(!lake_id %in% c("NN1", "Chapman", "Memorial", "Oglethorpe")) %>% 
+#   group_by(lakeday) %>% slice_max(rel_spores) %>% 
+#   ggplot(., aes(x = lakeday, y = AB*prev, color = species, fill = mean_spores)) + 
+#   scale_fill_viridis_c() + 
+#   geom_bar(stat = "identity", position = "stack") + 
+#   theme(axis.text.x = element_text(angle = 70, hjust = 1)) + labs(y = "# of infected individuals")
 
 
 p1 / p2
