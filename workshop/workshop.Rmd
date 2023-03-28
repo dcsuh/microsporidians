@@ -11,6 +11,8 @@ library(magrittr)
 library(here)
 library(ggridges)
 library(patchwork)
+library(textclean)
+library(lubridate)
 ```
 
 
@@ -114,39 +116,39 @@ yield %>% arrange(desc(mean_spores)) %>% mutate(species=factor(species, levels=u
 # get data for each sampling event
 dat1 <- ponds %>% select(lakeday, year, lake_id, jday, jday_cum, 
                        dpa.ncount, dam.ncount, dla.ncount, sim.ncount, dia.ncount, cer.ncount, bos.ncount,
-                       dpa.ninfect, dam.ninfect, dla.ninfect, sim.ninfect, dia.ninfect, cer.ninfect, bos.ninfect, 
+                       dpa.ninfect, dam.ninfect, dla.ninfect, sim.ninfect, dia.ninfect, cer.ninfect, bos.ninfect,
+                       dpa.lprev, dam.lprev, dla.lprev, sim.lprev, dia.lprev, cer.lprev, bos.lprev,
                        dpa.dens, dam.dens, dla.dens, sim.dens, dia.dens, cer.dens, bos.dens, total_abund) %>% distinct() 
 
 #calculate relative abundance and prevalence
-dat1 %<>% mutate(dpa.prev = dpa.ninfect/dpa.ncount,
-                 dam.prev = dam.ninfect/dam.ncount,
-                 dla.prev = dla.ninfect/dla.ncount,
-                 sim.prev = sim.ninfect/sim.ncount,
-                 dia.prev = dia.ninfect/dia.ncount,
-                 cer.prev = cer.ninfect/cer.ncount,
-                 bos.prev = bos.ninfect/bos.ncount,
-                 dpa.ra = dpa.ncount/total_abund,
-                 dam.ra = dam.ncount/total_abund,
-                 dla.ra = dla.ncount/total_abund,
-                 sim.ra = sim.ncount/total_abund,
-                 dia.ra = dia.ncount/total_abund,
-                 cer.ra = cer.ncount/total_abund,
-                 bos.ra = bos.ncount/total_abund)
+# dat1 %<>% mutate(dpa.prev = dpa.ninfect/dpa.ncount,
+#                  dam.prev = dam.ninfect/dam.ncount,
+#                  dla.prev = dla.ninfect/dla.ncount,
+#                  sim.prev = sim.ninfect/sim.ncount,
+#                  dia.prev = dia.ninfect/dia.ncount,
+#                  cer.prev = cer.ninfect/cer.ncount,
+#                  bos.prev = bos.ninfect/bos.ncount,
+#                  dpa.ra = dpa.ncount/total_abund,
+#                  dam.ra = dam.ncount/total_abund,
+#                  dla.ra = dla.ncount/total_abund,
+#                  sim.ra = sim.ncount/total_abund,
+#                  dia.ra = dia.ncount/total_abund,
+#                  cer.ra = cer.ncount/total_abund,
+#                  bos.ra = bos.ncount/total_abund)
 
 #site x event x species
 dens <- dat1 %>% pivot_longer(., cols = ends_with("dens"), values_to = "dens") %>% mutate(species = gsub(".dens","",name)) %>% select(lakeday, lake_id, jday_cum, dens, species)
 
 abund <- dat1 %>% pivot_longer(., cols = ends_with("ncount"), values_to = "AB") %>% mutate(species = gsub(".ncount","",name)) %>% select(lakeday, lake_id, jday_cum, AB, species)
 
-rel_abund <- dat1 %>% pivot_longer(., cols = ends_with("ra"), values_to = "RA") %>% mutate(species = gsub(".ra","",name)) %>% select(lakeday, lake_id, jday_cum, RA, species)
+#rel_abund <- dat1 %>% pivot_longer(., cols = ends_with("ra"), values_to = "RA") %>% mutate(species = gsub(".ra","",name)) %>% select(lakeday, lake_id, jday_cum, RA, species)
 
-prev <- dat1 %>% pivot_longer(., cols = ends_with("prev"), values_to = "prev") %>% mutate(species = gsub(".prev","",name)) %>% select(lakeday, lake_id, jday_cum, prev, species)
+prev <- dat1 %>% pivot_longer(., cols = ends_with("lprev"), values_to = "prev") %>% mutate(species = gsub(".lprev","",name)) %>% select(lakeday, lake_id, jday_cum, prev, species)
 
 
 
 #merge
-lake_int <- left_join(yield, rel_abund)
-lake_int %<>% left_join(., abund)
+lake_int <- left_join(yield, abund)
 lake_int %<>% left_join(., dens)
 lake_int %<>% left_join(., prev)
 
@@ -185,15 +187,25 @@ p1 / p2
 
 Site-months - REDO this section
 ```{r}
-site_months <- ponds %>% select(c(full_date:worm)) %>% group_by(st_date, lake_id) %>% distinct()
+site_months <- ponds %>% group_by(lakeday) %>% distinct()
 
 site_months %<>% mutate(abund = sum(c(dpa.ncount, dam.ncount, dla.ncount, sim.ncount, dia.ncount, cer.ncount, bos.ncount)),
-                        inf = sum(c(dpa.ninfect, dam.ninfect, dla.ninfect, sim.ninfect, dia.ninfect, cer.ninfect, bos.ninfect)),
-                        prev = inf/abund)
+                        dens = sum(c(dpa.dens, dam.dens, dla.dens, sim.dens, dia.dens, cer.dens, bos.dens)),
+                        inf = sum(c(if_else(is.na(dpa.lprev), 0, dpa.dens*dpa.lprev), 
+                                    if_else(is.na(dam.lprev), 0, dam.dens*dam.lprev), 
+                                    if_else(is.na(dla.lprev), 0, dla.dens*dla.lprev), 
+                                    if_else(is.na(sim.lprev), 0, sim.dens*sim.lprev), 
+                                    if_else(is.na(dia.lprev), 0, dia.dens*dia.lprev), 
+                                    if_else(is.na(cer.lprev), 0, cer.dens*cer.lprev), 
+                                    if_else(is.na(bos.lprev), 0, (bos.dens*bos.lprev)))),
+                        prev = inf/dens)
 
 site_months %<>% filter(!lake_id %in% c("Oglethorpe", "NN1", "Memorial", "Chapman"))
+```
 
-site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.factor(lake_id), height = abund)) + 
+
+```{r}
+site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.factor(lake_id), height = dens)) + 
   geom_density_ridges_gradient(show.legend = F, stat = "identity") + 
   labs(x = "Day", y ="Lake", title = "Abundance over time")
 
@@ -209,32 +221,15 @@ site_months %>% ggplot(.,aes(x=jday_cum, y=lake_id, group=lake_id, fill=as.facto
 
 
 ```{r}
-abundances <- site_months %>% select(c(st_date, lake_id, jday_cum, lakeday, dpa.ncount, dam.ncount, dla.ncount, sim.ncount, dia.ncount, cer.ncount, bos.ncount, abund))
-abundances %<>% pivot_longer(.,cols = ends_with("ncount"))
-abundances %<>% mutate(prop = value/abund)
+densities <- site_months %>% select(c(lake_id, jday_cum, lakeday, dpa.dens, dam.dens, dla.dens, sim.dens, dia.dens, cer.dens, bos.dens, dens))
+densities %<>% pivot_longer(.,cols = ends_with(".dens"))
+densities %<>% mutate(prop = value/dens)
 ```
 
 ```{r}
-abundances %>% filter(lake_id == "Deans") %>% ggplot(.,aes(x=as.factor(jday_cum), y=prop, fill=name)) + geom_bar(stat = "identity", position="stack")
+densities %>% filter(lake_id == "Deans") %>% ggplot(.,aes(x=as.factor(jday_cum), y=prop, fill=name)) + geom_bar(stat = "identity", position="stack")
 ```
 
-
-```{r}
-mean_abund <- site_months %>% group_by(lake_id) %>% summarize(dpa_prop = mean(dpa.ncount/abund),
-                                                              dpa_se = sd(dpa.ncount/abund)/sqrt(n()),
-                                                              dam_prop = mean(dam.ncount/abund),
-                                                              dam_se = sd(dam.ncount/abund)/sqrt(n()),
-                                                              dla_prop = mean(dla.ncount/abund),
-                                                              dla_se = sd(dla.ncount/abund)/sqrt(n()),
-                                                              sim_prop = mean(sim.ncount/abund),
-                                                              sim_se = sd(sim.ncount/abund)/sqrt(n()),
-                                                              dia_prop = mean(dia.ncount/abund),
-                                                              dia_se = sd(dia.ncount/abund)/sqrt(n()),
-                                                              cer_prop = mean(cer.ncount/abund),
-                                                              cer_se = sd(cer.ncount/abund)/sqrt(n()),
-                                                              bos_prop = mean(bos.ncount/abund),
-                                                              bos_se = sd(bos.ncount/abund)/sqrt(n()))
-```
 
 
 
